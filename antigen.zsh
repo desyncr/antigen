@@ -562,7 +562,7 @@ antigen-restore () {
     echo 'Please open a new shell to get the restored changes.'
 }
 
-antigen-clear-cache () {
+antigen-cache-clear () {
   local force=false
   if [[ $1 == --force ]]; then
       force=true
@@ -793,7 +793,7 @@ _antigen () {
     'snapshot:Create a snapshot of all the active clones'
     'restore:Restore the bundles state as specified in the snapshot'
     'selfupdate:Update antigen itself'
-    'clear-cache:Clears bundle cache'
+    'cache-reset:Clears bundle cache'
     'help:Print help message'
   )
 
