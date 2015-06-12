@@ -578,6 +578,22 @@ antigen-cache-clear () {
   fi
 }
 
+antigen-cache-rebuild () {
+    local force=false
+    if [[ $1 == --force ]]; then
+        force=true
+    fi
+
+    if $force || (echo -n '\nRebuild cache? [y/N] '; read -q); then
+        echo
+        -zcache-rebuild
+        echo Done.
+    else
+        echo
+        echo 'Nothing to do.'
+    fi
+}
+
 antigen-help () {
     cat <<EOF
 Antigen is a plugin management system for zsh. It makes it easy to grab awesome
