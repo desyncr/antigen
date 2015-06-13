@@ -110,7 +110,7 @@ antigen-bundles () {
     # Bulk add many bundles at one go. Empty lines and lines starting with a `#`
     # are ignored. Everything else is given to `antigen-bundle` as is, no
     # quoting rules applied.
-    -zcache-start
+    -zcache-start bundles
 
     local line
     grep '^[[:space:]]*[^[:space:]#]' | while read line; do
@@ -416,11 +416,15 @@ antigen-use () {
     if [[ -z "$ZSH_CACHE_DIR" ]]; then
         export ZSH_CACHE_DIR="$ZSH/cache/"
     fi
+    -zcache-start omz
     antigen-bundle --loc=lib
+    -zcache-done
 }
 
 -antigen-use-prezto () {
+    -zcache-start prezto
     antigen-bundle sorin-ionescu/prezto
+    -zcache-done
     export ZDOTDIR=$ADOTDIR/repos/
 }
 
@@ -439,7 +443,7 @@ antigen-prezto-lib () {
 }
 
 antigen-theme () {
-
+    -zcache-start theme
     if [[ "$1" != */* && "$1" != --* ]]; then
         # The first argument is just a name of the plugin, to be picked up from
         # the default repo.
@@ -450,6 +454,7 @@ antigen-theme () {
         antigen-bundle "$@" --btype=theme
 
     fi
+    -zcache-done
 
 }
 
