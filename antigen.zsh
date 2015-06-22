@@ -560,7 +560,9 @@ antigen-cache-clear () {
   if $force || (echo -n '\nClear all cache? [y/N] '; read -q); then
       echo
       -zcache-clear
-      echo Done.
+      echo
+      echo 'Done.'
+      echo 'Please open a new shell to see the changes.'
   else
       echo
       echo Nothing deleted.
@@ -576,7 +578,9 @@ antigen-cache-rebuild () {
     if $force || (echo -n '\nRebuild cache? [y/N] '; read -q); then
         echo
         -zcache-rebuild
-        echo Done.
+        echo
+        echo 'Done.'
+        echo 'Please open a new shell to see the changes.'
     else
         echo
         echo 'Nothing to do.'
