@@ -1,4 +1,8 @@
-export _ANTIGEN_CACHE_DIR=$_ANTIGEN_INSTALL_DIR/.cache/
+# Can't be changed after initialization
+local _ANTIGEN_CACHE_DIR=${_ANTIGEN_CACHE_DIR:-$_ANTIGEN_INSTALL_DIR/.cache/}
+local _ANTIGEN_CACHE_ENABLED=${_ANTIGEN_CACHE_ENABLED:-false}
+local _ANTIGEN_CACHE_MINIFY_ENABLED=${_ANTIGEN_CACHE_MINIFY_ENABLED:-true}
+local _ANTIGEN_CACHE_FIX_SCRIPT_SOURCE=${_ANTIGEN_CACHE_FIX_SCRIPT_SOURCE:-true}
 
 # Be sure .cache directory exists
 [[ ! -e $_ANTIGEN_CACHE_DIR ]] && mkdir $_ANTIGEN_CACHE_DIR
@@ -83,7 +87,21 @@ function -dots-start-capture () {
     function -antigen-load () {
         -antigen-dump-file-list "$1" "$2" "$3" | while read line; do
             if [[ ! $line == "" ]]; then
-                cat $line >>! $dots__capture__file
+                echo " # SOURCE: $line" >>! $dots__capture__file
+
+                # Fix script sourcing if there is a reference to $0 or ${0}
+                if $_ANTIGEN_CACHE_FIX_SCRIPT_SOURCE; then
+                    # TODO suffix __ZCACHE_FILE_PATH variable name with a PRN (from chksum?)
+                    # to avoid variable collision
+                    cat $line \
+                        | sed "/\${0/i__ZCACHE_FILE_PATH='"$line"'" | sed -e "s/\${0/\${__ZCACHE_FILE_PATH/" \
+                        | sed "/\$0/i__ZCACHE_FILE_PATH='"$line"'" | sed -e "s/\$0/\$__ZCACHE_FILE_PATH/" \
+                        >>! $dots__capture__file
+
+                else
+                    cat $line >>! $dots__capture__file
+                fi
+
                 echo ";\n" >>! $dots__capture__file
                 _zcache_extensions_paths="$extensions_paths $line"
 
@@ -156,12 +174,11 @@ function -zcache-done () {
     echo "fpath=($_zcache_extensions_paths $fpath)" >>! $_zcache_payload_path
     echo  " # END ZCACHE GENERATED FILE" >>! $_zcache_payload_path
 
-    # TODO add option
-    # if $_ANTIGEN_CACHE_MINIFY; then
+    if $_ANTIGEN_CACHE_MINIFY_ENABLED; then
         sed -i '/^#.*/d' $_zcache_payload_path
         sed -i '/^$/d' $_zcache_payload_path
         sed -i '/./!d' $_zcache_payload_path
-    # fi
+    fi
 
     -dots-stop-capture $_zcache_meta_path
 }
