@@ -12,6 +12,7 @@ local _zcache_context=""
 local _zcache_capturing=false
 local _zcache_meta_path=""
 local _zcache_payload_path=""
+local _zcache_antigen_bundle_record=""
 local dots__capture__file_load=""
 local dots__capture__file=""
 
@@ -70,11 +71,61 @@ local dots__capture__file=""
         fi
 
     fi
+
+    echo "$location"
+}
+
+# TODO merge this code with -antigen-bundle to avoid duplication
+-antigen-bundle-record () {
+    # Bundle spec arguments' default values.
+    local url="$ANTIGEN_DEFAULT_REPO_URL"
+    local loc=/
+    local branch=
+    local no_local_clone=false
+    local btype=plugin
+
+    # Parse the given arguments. (Will overwrite the above values).
+    eval "$(-antigen-parse-args \
+            'url?, loc? ; branch:?, no-local-clone?, btype:?' \
+            "$@")"
+
+    # Check if url is just the plugin name. Super short syntax.
+    if [[ "$url" != */* ]]; then
+        loc="plugins/$url"
+        url="$ANTIGEN_DEFAULT_REPO_URL"
+    fi
+
+    # Resolve the url.
+    url="$(-antigen-resolve-bundle-url "$url")"
+
+    # Add the branch information to the url.
+    if [[ ! -z $branch ]]; then
+        url="$url|$branch"
+    fi
+
+    # The `make_local_clone` variable better represents whether there should be
+    # a local clone made. For cloning to be avoided, firstly, the `$url` should
+    # be an absolute local path and `$branch` should be empty. In addition to
+    # these two conditions, either the `--no-local-clone` option should be
+    # given, or `$url` should not a git repo.
+    local make_local_clone=true
+    if [[ $url == /* && -z $branch &&
+            ( $no_local_clone == true || ! -d $url/.git ) ]]; then
+        make_local_clone=false
+    fi
+
+    # Add the theme extension to `loc`, if this is a theme.
+    if [[ $btype == theme && $loc != *.zsh-theme ]]; then
+        loc="$loc.zsh-theme"
+    fi
+
+    echo "$url $loc $btype $make_local_clone"
 }
 
 function -dots-start-capture () {
     dots__capture__file=$1
     dots__capture__file_load=$2
+    _zcache_extensions_paths=""
 
     # remove prior cache file
     [ -f "$dots__capture__file" ] && rm -f $dots__capture__file
@@ -87,25 +138,31 @@ function -dots-start-capture () {
     function -antigen-load () {
         -antigen-dump-file-list "$1" "$2" "$3" | while read line; do
             if [[ ! $line == "" ]]; then
-                echo " # SOURCE: $line" >>! $dots__capture__file
+                if [[ -f "$line" ]]; then
+                    echo " # SOURCE: $line" >>! $dots__capture__file
 
-                # Fix script sourcing if there is a reference to $0 or ${0}
-                if $_ANTIGEN_CACHE_FIX_SCRIPT_SOURCE; then
-                    # TODO suffix __ZCACHE_FILE_PATH variable name with a PRN (from chksum?)
-                    # to avoid variable collision
-                    cat $line \
-                        | sed "/\${0/i__ZCACHE_FILE_PATH='"$line"'" | sed -e "s/\${0/\${__ZCACHE_FILE_PATH/" \
-                        | sed "/\$0/i__ZCACHE_FILE_PATH='"$line"'" | sed -e "s/\$0/\$__ZCACHE_FILE_PATH/" \
-                        >>! $dots__capture__file
+                    # Fix script sourcing if there is a reference to $0 or ${0}
+                    if $_ANTIGEN_CACHE_FIX_SCRIPT_SOURCE; then
+                        # TODO suffix __ZCACHE_FILE_PATH variable name with a PRN (from chksum?)
+                        # to avoid variable collision
+                        cat $line \
+                            | sed "/\${0/i__ZCACHE_FILE_PATH='"$line"'" | sed -e "s/\${0/\${__ZCACHE_FILE_PATH/" \
+                            | sed "/\$0/i__ZCACHE_FILE_PATH='"$line"'" | sed -e "s/\$0/\$__ZCACHE_FILE_PATH/" \
+                            >>! $dots__capture__file
 
-                else
-                    cat $line >>! $dots__capture__file
+                    else
+                        cat $line >>! $dots__capture__file
+                    fi
+
+                    echo ";\n" >>! $dots__capture__file
+
+                    -dots-original-antigen-load "$@"
+
+                elif [[ -d "$line" ]]; then
+                    # load autocompletion
+                    fpath=($line $fpath)
+                    _zcache_extensions_paths="$line $_zcache_extensions_paths"
                 fi
-
-                echo ";\n" >>! $dots__capture__file
-                _zcache_extensions_paths="$extensions_paths $line"
-
-                -dots-original-antigen-load "$@"
             fi
         done
     }
@@ -128,8 +185,10 @@ function -dots-enable-bundle () {
 
 function -dots-intercept-bundle () {
     eval "function -bundle-intercepted-$(functions -- antigen-bundle)"
+    _zcache_antigen_bundle_record=""
     function antigen-bundle () {
         echo "$@" >>! $_zcache_meta_path
+        _zcache_antigen_bundle_record="$_zcache_antigen_bundle_record\n$(-antigen-bundle-record $@)"
         -bundle-intercepted-antigen-bundle "$@"
     }
 }
@@ -172,6 +231,7 @@ function -zcache-done () {
     fi
 
     echo "fpath=($_zcache_extensions_paths $fpath)" >>! $_zcache_payload_path
+    echo "export _ANTIGEN_BUNDLE_RECORD=\"\$_ANTIGEN_BUNDLE_RECORD$_zcache_antigen_bundle_record\"" >>! $_zcache_payload_path
     echo  " # END ZCACHE GENERATED FILE" >>! $_zcache_payload_path
 
     if $_ANTIGEN_CACHE_MINIFY_ENABLED; then
