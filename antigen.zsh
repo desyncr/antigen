@@ -11,9 +11,6 @@
 local _ANTIGEN_BUNDLE_RECORD=""
 local _ANTIGEN_INSTALL_DIR="$(cd "$(dirname "$0")" && pwd)"
 
-# Cache extension
-source $_ANTIGEN_INSTALL_DIR/ext/zcache.zsh
-
 # Used to defer compinit/compdef
 typeset -a __deferred_compdefs
 compdef () { __deferred_compdefs=($__deferred_compdefs "$*") }
@@ -104,16 +101,12 @@ antigen-bundles () {
     # Bulk add many bundles at one go. Empty lines and lines starting with a `#`
     # are ignored. Everything else is given to `antigen-bundle` as is, no
     # quoting rules applied.
-    -zcache-start bundles
-
     local line
     grep '^[[:space:]]*[^[:space:]#]' | while read line; do
         # Using `eval` so that we can use the shell-style quoting in each line
         # piped to `antigen-bundles`.
         eval "antigen-bundle $line"
     done
-
-    -zcache-done
 }
 
 antigen-update () {
@@ -404,15 +397,11 @@ antigen-use () {
     if [[ -z "$ZSH_CACHE_DIR" ]]; then
         export ZSH_CACHE_DIR="$ZSH/cache/"
     fi
-    -zcache-start omz
     antigen-bundle --loc=lib
-    -zcache-done
 }
 
 -antigen-use-prezto () {
-    -zcache-start prezto
     antigen-bundle sorin-ionescu/prezto
-    -zcache-done
     export ZDOTDIR=$ADOTDIR/repos/
 }
 
@@ -431,7 +420,6 @@ antigen-prezto-lib () {
 }
 
 antigen-theme () {
-    -zcache-start theme
     if [[ "$1" != */* && "$1" != --* ]]; then
         # The first argument is just a name of the plugin, to be picked up from
         # the default repo.
@@ -442,7 +430,6 @@ antigen-theme () {
         antigen-bundle "$@" --btype=theme
 
     fi
-    -zcache-done
 
 }
 
@@ -804,3 +791,6 @@ _antigen () {
 }
 
 -antigen-env-setup
+
+# Cache extension
+source $_ANTIGEN_INSTALL_DIR/ext/zcache.zsh
