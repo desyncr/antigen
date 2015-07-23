@@ -247,6 +247,44 @@ local _zcache_antigen_bundle_record=""
     -zcache-done
 }
 
+# antigen cache-clear command
+antigen-cache-clear () {
+  local force=false
+  if [[ $1 == --force ]]; then
+      force=true
+  fi
+
+  if $force || (echo -n '\nClear all cache? [y/N] '; read -q); then
+      echo
+      -zcache-clear
+      echo
+      echo 'Done.'
+      echo 'Please open a new shell to see the changes.'
+  else
+      echo
+      echo Nothing deleted.
+  fi
+}
+
+# antigen cache-rebuild command
+antigen-cache-rebuild () {
+    local force=false
+    if [[ $1 == --force ]]; then
+        force=true
+    fi
+
+    if $force || (echo -n '\nRebuild cache? [y/N] '; read -q); then
+        echo
+        -zcache-rebuild
+        echo
+        echo 'Done.'
+        echo 'Please open a new shell to see the changes.'
+    else
+        echo
+        echo 'Nothing to do.'
+    fi
+}
+
 # Cache .antigenrc if activated
 if $_ANTIGEN_CACHE_ENABLED; then
     -zcache-start

@@ -557,42 +557,6 @@ antigen-restore () {
     echo 'Please open a new shell to get the restored changes.'
 }
 
-antigen-cache-clear () {
-  local force=false
-  if [[ $1 == --force ]]; then
-      force=true
-  fi
-
-  if $force || (echo -n '\nClear all cache? [y/N] '; read -q); then
-      echo
-      -zcache-clear
-      echo
-      echo 'Done.'
-      echo 'Please open a new shell to see the changes.'
-  else
-      echo
-      echo Nothing deleted.
-  fi
-}
-
-antigen-cache-rebuild () {
-    local force=false
-    if [[ $1 == --force ]]; then
-        force=true
-    fi
-
-    if $force || (echo -n '\nRebuild cache? [y/N] '; read -q); then
-        echo
-        -zcache-rebuild
-        echo
-        echo 'Done.'
-        echo 'Please open a new shell to see the changes.'
-    else
-        echo
-        echo 'Nothing to do.'
-    fi
-}
-
 antigen-help () {
     cat <<EOF
 Antigen is a plugin management system for zsh. It makes it easy to grab awesome
@@ -789,8 +753,6 @@ antigen () {
     unfunction -- -set-default
 
 }
-
-
 
 # Setup antigen's autocompletion
 _antigen () {
