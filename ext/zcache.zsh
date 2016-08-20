@@ -116,6 +116,10 @@ local _zcache_antigen_bundle_record=""
     -zcache-intercept-bundle
 
     zcache__capture__file=$1
+    zcache__meta__file=$2
+
+    # remove prior meta file
+    [ -f "$zcache__meta__file" ] && rm -f "$zcache__meta__file"
 
     # remove prior cache file
     [ -f "$zcache__capture__file" ] && rm -f $zcache__capture__file
@@ -168,7 +172,10 @@ local _zcache_antigen_bundle_record=""
 # Disable antigen-bundle
 -zcache-disable-bundle () {
     eval "function -original-$(functions -- antigen-bundle)"
-    function antigen-bundle () {}
+    function antigen-bundle () {
+        _ANTIGEN_BUNDLE_RECORD="$_ANTIGEN_BUNDLE_RECORD\n$(-antigen-bundle-record $@)"
+        _zcache_antigen_bundle_record="$_zcache_antigen_bundle_record\n$(-antigen-bundle-record $@)"
+    }
 }
 
 # Enable antigen-bundle
@@ -180,9 +187,8 @@ local _zcache_antigen_bundle_record=""
 -zcache-intercept-bundle () {
     eval "function -intercepted-$(functions -- antigen-bundle)"
     _zcache_antigen_bundle_record=""
-    [ -f "$_ZCACHE_META_PATH" ] && rm -f $_ZCACHE_META_PATH
     antigen-bundle () {
-        echo "$@" >>! $_ZCACHE_META_PATH
+        echo "$@" >>! "$_ZCACHE_META_PATH"
         _zcache_antigen_bundle_record="$_zcache_antigen_bundle_record\n$(-antigen-bundle-record $@)"
         -intercepted-antigen-bundle "$@"
     }
@@ -207,13 +213,23 @@ local _zcache_antigen_bundle_record=""
     eval "function $(functions -- -intercepted-antigen-apply | sed 's/-intercepted-//')"
 }
 
+-zcache-intercept-update () {
+    eval "function -intercepted-$(functions -- -antigen-update)"
+    function antigen-update () {
+        -zcache-clear
+        -intercepted-antigen-update "$@"
+        echo 'Done.'
+        echo 'Please open a new shell to see the changes.'
+    }
+}
+
 # Loads cache if available otherwise starts to cache bundle/theme etc
 -zcache-start () {
     if [ -f "$_ZCACHE_PAYLOAD_PATH" ] ; then
         source "$_ZCACHE_PAYLOAD_PATH" # cache exists, load it
         -zcache-disable-bundle          # disable bundle so it won't load bundle twice
     else
-        -zcache-start-capture "$_ZCACHE_PAYLOAD_PATH"
+        -zcache-start-capture "$_ZCACHE_PAYLOAD_PATH" "$_ZCACHE_META_PATH"
     fi
 }
 
@@ -237,18 +253,13 @@ local _zcache_antigen_bundle_record=""
     [ -f "$_ZCACHE_PAYLOAD_PATH" ] && rm "$_ZCACHE_PAYLOAD_PATH"
 }
 
-# Removes the cache and rebuilds it
--zcache-rebuild () {
-    -zcache-clear
-    -zcache-start
-    cat "$_ZCACHE_META_PATH" | while read line; do
-        eval "antigen-bundle $line"
-    done
-    -zcache-done
+# Resets cache and starts capturing
+-zcache-restart () {
+    -zcache-start-capture "$_ZCACHE_PAYLOAD_PATH"
 }
 
-# antigen cache-clear command
-antigen-cache-clear () {
+# antigen cache-reset command
+antigen-cache-reset () {
   local force=false
   if [[ $1 == --force ]]; then
       force=true
@@ -264,25 +275,6 @@ antigen-cache-clear () {
       echo
       echo Nothing deleted.
   fi
-}
-
-# antigen cache-rebuild command
-antigen-cache-rebuild () {
-    local force=false
-    if [[ $1 == --force ]]; then
-        force=true
-    fi
-
-    if $force || (echo -n '\nRebuild cache? [y/N] '; read -q); then
-        echo
-        -zcache-rebuild
-        echo
-        echo 'Done.'
-        echo 'Please open a new shell to see the changes.'
-    else
-        echo
-        echo 'Nothing to do.'
-    fi
 }
 
 # Cache .antigenrc if activated
