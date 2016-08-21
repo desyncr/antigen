@@ -123,12 +123,16 @@ local _zcache_antigen_bundle_record=""
 
     # remove prior cache file
     [ -f "$zcache__capture__file" ] && rm -f $zcache__capture__file
-    echo " # START ZCACHE GENERATED FILE" >>! $zcache__capture__file
+    zcache__capture__file_created=0
 
     # save current -antigen-load and shim in a version
     # that logs calls to the catpure file
     eval "function -original$(functions -- -antigen-load)"
     function -antigen-load () {
+
+        [ -z "$zcache__capture__file_created" ] && echo " # START ZCACHE GENERATED FILE" >>! $zcache__capture__file;
+        zcache__capture__file_created=true
+
         -antigen-dump-file-list "$1" "$2" "$3" | while read line; do
             if [[ ! $line == "" ]]; then
                 if [[ -f "$line" ]]; then
@@ -280,7 +284,17 @@ antigen-cache-reset () {
   fi
 }
 
+# antigen init /path/to/.antigenrc
+antigen-init () {
+    if [ -f "$_ZCACHE_PAYLOAD_PATH" ] ; then
+        export _ANTIGEN_BUNDLE_RECORD=$(cat $_ZCACHE_META_PATH)
+        source "$_ZCACHE_PAYLOAD_PATH" # cache exists, load it
+    else
+        source "$@"
+    fi
+}
+
 # Cache .antigenrc if activated
-if $_ANTIGEN_CACHE_ENABLED; then
+if [[ "$_ANTIGEN_CACHE_ENABLED" == "true" ]]; then
     -zcache-start
 fi
