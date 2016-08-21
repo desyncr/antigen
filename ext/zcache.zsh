@@ -204,7 +204,8 @@ local _zcache_antigen_bundle_record=""
     eval "function -intercepted-$(functions -- antigen-apply)"
     function antigen-apply () {
         -intercepted-antigen-apply "$@"
-        -zcache-done
+        -zcache-enable-bundle
+        -zcache-deintercept-apply
     }
 }
 
@@ -225,6 +226,8 @@ local _zcache_antigen_bundle_record=""
 
 # Loads cache if available otherwise starts to cache bundle/theme etc
 -zcache-start () {
+    -zcache-intercept-apply
+
     if [ -f "$_ZCACHE_PAYLOAD_PATH" ] ; then
         source "$_ZCACHE_PAYLOAD_PATH" # cache exists, load it
         -zcache-disable-bundle          # disable bundle so it won't load bundle twice
