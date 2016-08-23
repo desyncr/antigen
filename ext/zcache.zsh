@@ -143,8 +143,8 @@ local _zcache_antigen_bundle_record=""
                         # TODO suffix __ZCACHE_FILE_PATH variable name with a PRN (from chksum?)
                         # to avoid variable collision
                         cat $line \
-                            | sed "/\${0/i__ZCACHE_FILE_PATH='"$line"'" | sed -e "s/\${0/\${__ZCACHE_FILE_PATH/" \
-                            | sed "/\$0/i__ZCACHE_FILE_PATH='"$line"'" | sed -e "s/\$0/\$__ZCACHE_FILE_PATH/" \
+                            | sed $'/\${0/i\\\n__ZCACHE_FILE_PATH=\''$line$'\'\n' | sed -e "s/\${0/\${__ZCACHE_FILE_PATH/" \
+                            | sed $'/\$0/i\\\n__ZCACHE_FILE_PATH=\''$line$'\'\n' | sed -e "s/\$0/\$__ZCACHE_FILE_PATH/" \
                             >>! $zcache__capture__file
 
                     else
@@ -287,7 +287,7 @@ antigen-cache-reset () {
 # antigen init /path/to/.antigenrc
 antigen-init () {
     if [ -f "$_ZCACHE_PAYLOAD_PATH" ] ; then
-        export _ANTIGEN_BUNDLE_RECORD=$(cat $_ZCACHE_META_PATH)
+        _ANTIGEN_BUNDLE_RECORD=$(cat $_ZCACHE_META_PATH)
         source "$_ZCACHE_PAYLOAD_PATH" # cache exists, load it
     else
         source "$@"
