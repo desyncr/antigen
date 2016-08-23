@@ -3,6 +3,7 @@ local _ANTIGEN_CACHE_DIR=${_ANTIGEN_CACHE_DIR:-$_ANTIGEN_INSTALL_DIR/.cache/}
 local _ANTIGEN_CACHE_ENABLED=${_ANTIGEN_CACHE_ENABLED:-true}
 local _ANTIGEN_CACHE_MINIFY_ENABLED=${_ANTIGEN_CACHE_MINIFY_ENABLED:-true}
 local _ANTIGEN_CACHE_FIX_SCRIPT_SOURCE=${_ANTIGEN_CACHE_FIX_SCRIPT_SOURCE:-true}
+local _ZCACHE_PAYLOAD_LOADED=false
 
 # Be sure .cache directory exists
 [[ ! -e $_ANTIGEN_CACHE_DIR ]] && mkdir $_ANTIGEN_CACHE_DIR
@@ -235,6 +236,7 @@ local _zcache_antigen_bundle_record=""
     if [ -f "$_ZCACHE_PAYLOAD_PATH" ] ; then
         source "$_ZCACHE_PAYLOAD_PATH" # cache exists, load it
         -zcache-disable-bundle          # disable bundle so it won't load bundle twice
+        _ZCACHE_PAYLOAD_LOADED=true
     else
         -zcache-start-capture "$_ZCACHE_PAYLOAD_PATH" "$_ZCACHE_META_PATH"
     fi
@@ -286,6 +288,11 @@ antigen-cache-reset () {
 
 # antigen init /path/to/.antigenrc
 antigen-init () {
+    # Backward compatibility
+    if $_ZCACHE_PAYLOAD_LOADED; then
+        return
+    fi
+
     if [ -f "$_ZCACHE_PAYLOAD_PATH" ] ; then
         _ANTIGEN_BUNDLE_RECORD=$(cat $_ZCACHE_META_PATH)
         source "$_ZCACHE_PAYLOAD_PATH" # cache exists, load it
