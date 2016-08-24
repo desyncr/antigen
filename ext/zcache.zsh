@@ -3,13 +3,13 @@ local _ANTIGEN_CACHE_DIR=${_ANTIGEN_CACHE_DIR:-$_ANTIGEN_INSTALL_DIR/.cache/}
 local _ANTIGEN_CACHE_ENABLED=${_ANTIGEN_CACHE_ENABLED:-true}
 local _ANTIGEN_CACHE_MINIFY_ENABLED=${_ANTIGEN_CACHE_MINIFY_ENABLED:-true}
 local _ANTIGEN_CACHE_FIX_SCRIPT_SOURCE=${_ANTIGEN_CACHE_FIX_SCRIPT_SOURCE:-true}
-local _ZCACHE_PAYLOAD_LOADED=false
+_ZCACHE_PAYLOAD_LOADED=false
 
 # Be sure .cache directory exists
 [[ ! -e $_ANTIGEN_CACHE_DIR ]] && mkdir $_ANTIGEN_CACHE_DIR
 
-local _ZCACHE_META_PATH="$_ANTIGEN_CACHE_DIR/.zcache-meta"
-local _ZCACHE_PAYLOAD_PATH="$_ANTIGEN_CACHE_DIR/.zcache-payload"
+_ZCACHE_META_PATH="$_ANTIGEN_CACHE_DIR/.zcache-meta"
+_ZCACHE_PAYLOAD_PATH="$_ANTIGEN_CACHE_DIR/.zcache-payload"
 
 local _zcache_extensions_paths=""
 local _zcache_antigen_bundle_record=""
@@ -129,7 +129,7 @@ local _zcache_antigen_bundle_record=""
     # save current -antigen-load and shim in a version
     # that logs calls to the catpure file
     eval "function -original$(functions -- -antigen-load)"
-    function -antigen-load () {
+    -antigen-load () {
 
         [ -z "$zcache__capture__file_created" ] && echo " # START ZCACHE GENERATED FILE" >>! $zcache__capture__file;
         zcache__capture__file_created=true
@@ -177,7 +177,7 @@ local _zcache_antigen_bundle_record=""
 # Disable antigen-bundle
 -zcache-disable-bundle () {
     eval "function -original-$(functions -- antigen-bundle)"
-    function antigen-bundle () {
+    antigen-bundle () {
         _ANTIGEN_BUNDLE_RECORD="$_ANTIGEN_BUNDLE_RECORD\n$(-antigen-bundle-record $@)"
         _zcache_antigen_bundle_record="$_zcache_antigen_bundle_record\n$(-antigen-bundle-record $@)"
     }
@@ -207,10 +207,12 @@ local _zcache_antigen_bundle_record=""
 # Intercepts antigen-apply function in order to have a 'done' event
 -zcache-intercept-apply () {
     eval "function -intercepted-$(functions -- antigen-apply)"
-    function antigen-apply () {
+    antigen-apply () {
         -intercepted-antigen-apply "$@"
         -zcache-enable-bundle
         -zcache-deintercept-apply
+        -zcache-done
+        _ANTIGEN_BUNDLE_RECORD=$(cat $_ZCACHE_META_PATH)
     }
 }
 
@@ -221,7 +223,7 @@ local _zcache_antigen_bundle_record=""
 
 -zcache-intercept-update () {
     eval "function -intercepted-$(functions -- -antigen-update)"
-    function antigen-update () {
+    antigen-update () {
         -zcache-clear
         -intercepted-antigen-update "$@"
         echo 'Done.'
@@ -237,6 +239,7 @@ local _zcache_antigen_bundle_record=""
         source "$_ZCACHE_PAYLOAD_PATH" # cache exists, load it
         -zcache-disable-bundle          # disable bundle so it won't load bundle twice
         _ZCACHE_PAYLOAD_LOADED=true
+        _ANTIGEN_BUNDLE_RECORD=$(cat $_ZCACHE_META_PATH)
     else
         -zcache-start-capture "$_ZCACHE_PAYLOAD_PATH" "$_ZCACHE_META_PATH"
     fi
