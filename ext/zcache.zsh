@@ -253,9 +253,12 @@ local _zcache_antigen_bundle_record=""
     echo  " # END ZCACHE GENERATED FILE" >>! $_ZCACHE_PAYLOAD_PATH
 
     if $_ANTIGEN_CACHE_MINIFY_ENABLED; then
-        sed -i '' '/^#.*/d' "$_ZCACHE_PAYLOAD_PATH"
-        sed -i '' '/^$/d' "$_ZCACHE_PAYLOAD_PATH"
-        sed -i '' '/./!d' "$_ZCACHE_PAYLOAD_PATH"
+        sed -i'' -e '/^#.*/d' "$_ZCACHE_PAYLOAD_PATH"
+        sed -i'' -e '/^$/d' "$_ZCACHE_PAYLOAD_PATH"
+        sed -i'' -e '/./!d' "$_ZCACHE_PAYLOAD_PATH"
+
+        # Hack BSD sed
+        [ -f "$_ZCACHE_PAYLOAD_PATH-e" ] && rm "$_ZCACHE_PAYLOAD_PATH-e"
     fi
 
     -zcache-stop-capture
