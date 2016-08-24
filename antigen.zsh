@@ -10,6 +10,7 @@
 # FIXME: Is not kept local by zsh!
 local _ANTIGEN_BUNDLE_RECORD=""
 local _ANTIGEN_INSTALL_DIR="$(cd "$(dirname "$0")" && pwd)"
+local _ANTIGEN_ZCACHE_EXTENSION=false
 
 # Do not load anything if anything is no available.
 if ! which git &> /dev/null; then
@@ -565,9 +566,23 @@ documentation, visit the project's page at 'http://antigen.sharats.me'.
 EOF
 }
 
+# Load zcache extension
+-zcache-load-extension () {
+    if ! $_ANTIGEN_ZCACHE_EXTENSION; then
+        _ANTIGEN_ZCACHE_EXTENSION=true
+
+        # Cache extension
+        source $_ANTIGEN_INSTALL_DIR/ext/zcache.zsh
+        -zcache-start
+    fi
+}
+
 # A syntax sugar to avoid the `-` when calling antigen commands. With this
 # function, you can write `antigen-bundle` as `antigen bundle` and so on.
 antigen () {
+    # Lazy load zcache extension
+    [[ "$_ANTIGEN_CACHE_ENABLED" == "true" ]] && -zcache-load-extension
+
     local cmd="$1"
     if [[ -z "$cmd" ]]; then
         echo 'Antigen: Please give a command to run.' >&2
@@ -810,6 +825,3 @@ _antigen () {
 }
 
 -antigen-env-setup
-
-# Cache extension
-source $_ANTIGEN_INSTALL_DIR/ext/zcache.zsh

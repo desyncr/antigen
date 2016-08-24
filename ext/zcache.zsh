@@ -300,8 +300,3 @@ antigen-init () {
         source "$@"
     fi
 }
-
-# Cache .antigenrc if activated
-if [[ "$_ANTIGEN_CACHE_ENABLED" == "true" ]]; then
-    -zcache-start
-fi
