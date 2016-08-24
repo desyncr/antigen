@@ -252,9 +252,9 @@ local _zcache_antigen_bundle_record=""
     echo  " # END ZCACHE GENERATED FILE" >>! $_ZCACHE_PAYLOAD_PATH
 
     if $_ANTIGEN_CACHE_MINIFY_ENABLED; then
-        sed -i '/^#.*/d' $_ZCACHE_PAYLOAD_PATH
-        sed -i '/^$/d' $_ZCACHE_PAYLOAD_PATH
-        sed -i '/./!d' $_ZCACHE_PAYLOAD_PATH
+        sed -i '' '/^#.*/d' "$_ZCACHE_PAYLOAD_PATH"
+        sed -i '' '/^$/d' "$_ZCACHE_PAYLOAD_PATH"
+        sed -i '' '/./!d' "$_ZCACHE_PAYLOAD_PATH"
     fi
 
     -zcache-stop-capture
