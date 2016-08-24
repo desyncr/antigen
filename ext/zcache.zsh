@@ -193,7 +193,7 @@ local _zcache_antigen_bundle_record=""
     eval "function -intercepted-$(functions -- antigen-bundle)"
     _zcache_antigen_bundle_record=""
     antigen-bundle () {
-        echo "$@" >>! "$_ZCACHE_META_PATH"
+        echo "$(-antigen-bundle-record $@)" >>! "$_ZCACHE_META_PATH"
         _zcache_antigen_bundle_record="$_zcache_antigen_bundle_record\n$(-antigen-bundle-record $@)"
         -intercepted-antigen-bundle "$@"
     }
@@ -222,7 +222,7 @@ local _zcache_antigen_bundle_record=""
 }
 
 -zcache-intercept-update () {
-    eval "function -intercepted-$(functions -- -antigen-update)"
+    eval "function -intercepted-$(functions -- antigen-update)"
     antigen-update () {
         -zcache-clear
         -intercepted-antigen-update "$@"
@@ -234,6 +234,7 @@ local _zcache_antigen_bundle_record=""
 # Loads cache if available otherwise starts to cache bundle/theme etc
 -zcache-start () {
     -zcache-intercept-apply
+    -zcache-intercept-update
 
     if [ -f "$_ZCACHE_PAYLOAD_PATH" ] ; then
         source "$_ZCACHE_PAYLOAD_PATH" # cache exists, load it
