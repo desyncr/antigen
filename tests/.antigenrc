@@ -2,7 +2,7 @@ antigen bundles <<EOBUNDLES
   git
   command-not-found
   colored-man-pages
-  zsh-users/zsh-autosuggestions
+  #zsh-users/zsh-autosuggestions
   zsh-users/zsh-completions
   #jimhester/per-directory-history
   #zsh-users/zsh-syntax-highlighting
