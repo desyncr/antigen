@@ -47,4 +47,3 @@ script:
   - "_ANTIGEN_CACHE_ENABLED=true _ANTIGEN_INIT_ENABLED=true make stats"
   - "_ANTIGEN_CACHE_ENABLED=false _ANTIGEN_INIT_ENABLED=true make stats"
   - "_ANTIGEN_CACHE_ENABLED=false _ANTIGEN_INIT_ENABLED=false make stats"
-

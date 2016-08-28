@@ -10,16 +10,13 @@
 local _ANTIGEN_BUNDLE_RECORD=""
 local _ANTIGEN_INSTALL_DIR="$(cd "$(dirname "$0")" && pwd)"
 local _ANTIGEN_ZCACHE_EXTENSION=false
-local _ANTIGEN_CACHE_ENABLED=${_ANTIGEN_CACHE_ENABLED:true}
+local _ANTIGEN_CACHE_ENABLED=${_ANTIGEN_CACHE_ENABLED:-true}
 
 # Do not load anything if anything is no available.
 if ! which git &> /dev/null; then
     echo 'Antigen: Please install git to use Antigen.' >&2
     return 1
 fi
-
-# Cache extension
-source $_ANTIGEN_INSTALL_DIR/ext/zcache.zsh
 
 # Used to defer compinit/compdef
 typeset -a __deferred_compdefs
