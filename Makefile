@@ -14,7 +14,7 @@ tests:
 
 stats:
 	cp ${PROJECT}/tests/.zshrc ${HOME}/.zshrc
-	for i in $$(seq 1 10); do time -f "#$$i \t%es real \t%Us user \t%Ss system \t%x status" ${SHELL} -ic exit; done
+	for i in $$(seq 1 10); do /usr/bin/time -f "#$$i \t%es real \t%Us user \t%Ss system \t%x status" $${SHELL} -ic exit; done
 
 install:
 	mkdir -p ${PREFIX}/share && cp ${PROJECT}/antigen.zsh ${PROJECT}/share/antigen.zsh
