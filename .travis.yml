@@ -12,6 +12,7 @@ cache:
 
 env:
   global:
+    - ANTIGEN=$TRAVIS_BUILD_DIR
     - ZSH_REMOTE_URL=https://github.com/zsh-users/zsh.git
     - BUILDS_PATH=$HOME/.zsh-builds
     - ZSH_SOURCE=$HOME/zsh
@@ -23,6 +24,13 @@ env:
     - ZSH_VERSION=zsh-4.3.17
     - ZSH_VERSION=zsh-4.3.5
 
+install:
+  # Install python requirements.
+  - "pip install cram==0.6"
+
+  # Install zsh versions from source.
+  - "./tests/build-zsh.sh $ZSH_VERSION $BUILDS_PATH $ZSH_SOURCE"
+
 before_script:
   # Show the git version being used to test.
   - "git --version"
@@ -33,13 +41,6 @@ before_script:
 
   # Show zsh version being deployed.
   - "$BUILDS_PATH/$ZSH_VERSION/zsh --version"
-
-install:
-  # Install python requirements.
-  - "pip install cram==0.6"
-
-  # Install zsh versions from source.
-  - "./tests/build-zsh.sh $ZSH_VERSION $BUILDS_PATH $ZSH_SOURCE"
 
 # Run the tests.
 script:
