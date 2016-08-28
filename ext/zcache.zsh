@@ -1,5 +1,5 @@
 # Can't be changed after initialization
-local _ANTIGEN_CACHE_DIR=${_ANTIGEN_CACHE_DIR:-$_ANTIGEN_INSTALL_DIR/.cache/}
+local _ANTIGEN_CACHE_DIR=${_ANTIGEN_CACHE_DIR:-$_ANTIGEN_INSTALL_DIR/.cache}
 local _ANTIGEN_CACHE_MINIFY_ENABLED=${_ANTIGEN_CACHE_MINIFY_ENABLED:-true}
 local _ANTIGEN_CACHE_FIX_SCRIPT_SOURCE=${_ANTIGEN_CACHE_FIX_SCRIPT_SOURCE:-true}
 _ZCACHE_PAYLOAD_LOADED=false
@@ -272,21 +272,10 @@ local _zcache_antigen_bundle_record=""
 
 # antigen cache-reset command
 antigen-cache-reset () {
-  local force=false
-  if [[ $1 == --force ]]; then
-      force=true
-  fi
-
-  if $force || (echo -n '\nClear all cache? [y/N] '; read -q); then
-      echo
-      -zcache-clear
-      echo
-      echo 'Done.'
-      echo 'Please open a new shell to see the changes.'
-  else
-      echo
-      echo Nothing deleted.
-  fi
+    -zcache-clear
+    echo
+    echo 'Done.'
+    echo 'Please open a new shell to see the changes.'
 }
 
 # antigen init /path/to/.antigenrc
