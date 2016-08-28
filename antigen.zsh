@@ -782,9 +782,10 @@ _antigen () {
     'snapshot:Create a snapshot of all the active clones'
     'restore:Restore the bundles state as specified in the snapshot'
     'selfupdate:Update antigen itself'
-    'cache-reset:Clears bundle cache'
-    'help:Print help message'
   )
+  [[ "$_ANTIGEN_CACHE_ENABLED" == "true" ]] && _1st_arguments += ('cache-reset:Clears bundle cache')
+
+  _1st_arguments += ('cache-reset:Clears bundle cache')
 
   __bundle() {
     _arguments \
