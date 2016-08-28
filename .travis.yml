@@ -9,6 +9,7 @@ cache:
   directories:
     - $HOME/zsh
     - $HOME/.zsh-builds
+    - $HOME/.antigen
 
 env:
   global:
