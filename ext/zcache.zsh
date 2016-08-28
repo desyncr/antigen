@@ -1,6 +1,5 @@
 # Can't be changed after initialization
 local _ANTIGEN_CACHE_DIR=${_ANTIGEN_CACHE_DIR:-$_ANTIGEN_INSTALL_DIR/.cache/}
-local _ANTIGEN_CACHE_ENABLED=${_ANTIGEN_CACHE_ENABLED:-true}
 local _ANTIGEN_CACHE_MINIFY_ENABLED=${_ANTIGEN_CACHE_MINIFY_ENABLED:-true}
 local _ANTIGEN_CACHE_FIX_SCRIPT_SOURCE=${_ANTIGEN_CACHE_FIX_SCRIPT_SOURCE:-true}
 _ZCACHE_PAYLOAD_LOADED=false
@@ -177,10 +176,7 @@ local _zcache_antigen_bundle_record=""
 # Disable antigen-bundle
 -zcache-disable-bundle () {
     eval "function -original-$(functions -- antigen-bundle)"
-    antigen-bundle () {
-        _ANTIGEN_BUNDLE_RECORD="$_ANTIGEN_BUNDLE_RECORD\n$(-antigen-bundle-record $@)"
-        _zcache_antigen_bundle_record="$_zcache_antigen_bundle_record\n$(-antigen-bundle-record $@)"
-    }
+    antigen-bundle () {}
 }
 
 # Enable antigen-bundle

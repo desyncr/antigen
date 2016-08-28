@@ -42,4 +42,9 @@ install:
   - "./tests/build-zsh.sh $ZSH_VERSION $BUILDS_PATH $ZSH_SOURCE"
 
 # Run the tests.
-script: "make tests PYENV= SHELL=$BUILDS_PATH/$ZSH_VERSION/zsh"
+script:
+  - "make tests PYENV= SHELL=$BUILDS_PATH/$ZSH_VERSION/zsh"
+  - "_ANTIGEN_CACHE_ENABLED=true _ANTIGEN_INIT_ENABLED=true make stats"
+  - "_ANTIGEN_CACHE_ENABLED=false _ANTIGEN_INIT_ENABLED=true make stats"
+  - "_ANTIGEN_CACHE_ENABLED=false _ANTIGEN_INIT_ENABLED=false make stats"
+

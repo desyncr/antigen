@@ -7,10 +7,10 @@
 # Each line in this string has the following entries separated by a space
 # character.
 # <repo-url>, <plugin-location>, <bundle-type>, <has-local-clone>
-# FIXME: Is not kept local by zsh!
 local _ANTIGEN_BUNDLE_RECORD=""
 local _ANTIGEN_INSTALL_DIR="$(cd "$(dirname "$0")" && pwd)"
 local _ANTIGEN_ZCACHE_EXTENSION=false
+local _ANTIGEN_CACHE_ENABLED=${_ANTIGEN_CACHE_ENABLED:true}
 
 # Do not load anything if anything is no available.
 if ! which git &> /dev/null; then

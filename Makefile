@@ -11,6 +11,10 @@ itests:
 tests:
 	${PYENV} ZDOTDIR="${PWD}/tests" cram ${CRAM_OPTS} --shell=${SHELL} ${TESTS}
 
+stats:
+	cp ${PWD}/tests/.zshrc ${HOME}/.zshrc
+	for i in $$(seq 1 10); do time -f "#$$i \t%es real \t%Us user \t%Ss system \t%x status"  zsh -ic exit; done
+
 install:
 	mkdir -p ${PREFIX}/share && cp ./antigen.zsh ${PREFIX}/share/antigen.zsh
 
