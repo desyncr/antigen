@@ -284,6 +284,9 @@ antigen-cache-reset () {
 antigen-init () {
     # Backward compatibility
     if $_ZCACHE_PAYLOAD_LOADED; then
+        -zcache-enable-bundle
+        -zcache-deintercept-bundle
+        -zcache-deintercept-apply
         return
     fi
 
