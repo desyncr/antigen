@@ -757,8 +757,8 @@ antigen () {
     -set-default ADOTDIR $HOME/.antigen
 
     # Setup antigen's own completion.
-    #autoload -U compinit
-    #compinit -C
+    autoload -Uz compinit
+    compinit -C
     compdef _antigen antigen
 
     # Remove private functions.
@@ -783,9 +783,9 @@ _antigen () {
     'restore:Restore the bundles state as specified in the snapshot'
     'selfupdate:Update antigen itself'
   )
-  [[ "$_ANTIGEN_CACHE_ENABLED" == "true" ]] && _1st_arguments += ('cache-reset:Clears bundle cache')
+  [[ "$_ANTIGEN_CACHE_ENABLED" == "true" ]] && _1st_arguments+=('cache-reset:Clears bundle cache')
 
-  _1st_arguments += ('cache-reset:Clears bundle cache')
+  _1st_arguments+=('cache-reset:Clears bundle cache')
 
   __bundle() {
     _arguments \
