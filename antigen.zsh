@@ -11,8 +11,10 @@ local _ANTIGEN_BUNDLE_RECORD=""
 local _ANTIGEN_INSTALL_DIR="$(cd "$(dirname "$0")" && pwd)"
 local _ANTIGEN_ZCACHE_EXTENSION=false
 local _ANTIGEN_CACHE_ENABLED=${_ANTIGEN_CACHE_ENABLED:-true}
+local _ANTIGEN_LOG=$_ANTIGEN_INSTALL_DIR/antigen.log
+__deferred_bundles=''
 
-# Do not load anything if anything is no available.
+# Do not load anything if git is no available.
 if ! which git &> /dev/null; then
     echo 'Antigen: Please install git to use Antigen.' >&2
     return 1
@@ -27,7 +29,10 @@ compdef () { __deferred_compdefs=($__deferred_compdefs "$*") }
 # Keyword only arguments:
 #   branch - The branch of the repo to use for this bundle.
 antigen-bundle () {
+    __deferred_bundles="$__deferred_bundles\n$@"
+}
 
+-antigen-bundle () {
     # Bundle spec arguments' default values.
     local url="$ANTIGEN_DEFAULT_REPO_URL"
     local loc=/
@@ -84,6 +89,11 @@ antigen-bundle () {
 
 }
 
+# Returns the short name (user/repo) from a full url github.com/user/repo.git
+-antigen-bundle-short-name () {
+    echo "$@" | sed -r "s|.*/(.*/.*).git.*$|\1|"
+}
+
 -antigen-resolve-bundle-url () {
     # Given an acceptable short/full form of a bundle's repo url, this function
     # echoes the full form of the repo's clone url.
@@ -105,14 +115,8 @@ antigen-bundle () {
 }
 
 antigen-bundles () {
-    # Bulk add many bundles at one go. Empty lines and lines starting with a `#`
-    # are ignored. Everything else is given to `antigen-bundle` as is, no
-    # quoting rules applied.
-    local line
     grep '^[[:space:]]*[^[:space:]#]' | while read line; do
-        # Using `eval` so that we can use the shell-style quoting in each line
-        # piped to `antigen-bundles`.
-        eval "antigen-bundle $line"
+        __deferred_bundles="$__deferred_bundles\n$line"
     done
 }
 
@@ -220,13 +224,15 @@ antigen-revert () {
 
     # A temporary function wrapping the `git` command with repeated arguments.
     --plugin-git () {
-        (cd "$clone_dir" && git --no-pager "$@")
+        (cd "$clone_dir" && git --no-pager "$@" 2&>1 >> antigen.log)
     }
 
     # Clone if it doesn't already exist.
     if [[ ! -d $clone_dir ]]; then
-        git clone --recursive "${url%|*}" "$clone_dir"
+        echo "Installing $(-antigen-bundle-short-name $url)... "
+        git clone --recursive "${url%|*}" "$clone_dir" 2&>1 >> antigen.log
     elif $update; then
+        echo "Updating $(-antigen-bundle-short-name $url)... "
         # Save current revision.
         local old_rev="$(--plugin-git rev-parse HEAD)"
         # Pull changes if update requested.
@@ -438,15 +444,26 @@ antigen-theme () {
         # the default repo.
         local name="${1:-robbyrussell}"
         antigen-bundle --loc=themes/$name --btype=theme
-
     else
         antigen-bundle "$@" --btype=theme
-
     fi
-
 }
 
 antigen-apply () {
+    if ! $_ZCACHE_PAYLOAD_LOADED; then
+        # Bulk add many bundles at one go. Empty lines and lines starting with a `#`
+        # are ignored. Everything else is given to `antigen-bundle` as is, no
+        # quoting rules applied.
+        local line
+        local start=$(date +'%s')
+        local count=0
+        echo $__deferred_bundles | grep '^[[:space:]]*[^[:space:]#]' | while read line; do
+            ((count=$count+1))
+            # Using `eval` so that we can use the shell-style quoting in each line
+            # piped to `antigen-bundles`.
+            eval "-antigen-bundle $line"
+        done
+    fi
 
     # Initialize completion.
     local cdef
@@ -467,6 +484,11 @@ antigen-apply () {
 
     unset __deferred_compdefs
 
+    if ! $_ZCACHE_PAYLOAD_LOADED; then
+        local end=$(date +'%s')
+        local took=$(echo $end-$start | bc -l)
+        echo "\nOK. ${count} bundle(s) installed, took ${took}s.\n"
+    fi
 }
 
 antigen-list () {

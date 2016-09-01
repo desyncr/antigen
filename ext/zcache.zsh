@@ -204,13 +204,13 @@ local _zcache_antigen_bundle_record=""
 -zcache-intercept-apply () {
     eval "function -intercepted-$(functions -- antigen-apply)"
     antigen-apply () {
-	if ! $_ZCACHE_PAYLOAD_LOADED; then
-	    -intercepted-antigen-apply "$@"
-	    -zcache-enable-bundle
-	    -zcache-deintercept-apply
-	    -zcache-done
-	    _ANTIGEN_BUNDLE_RECORD=$(cat $_ZCACHE_META_PATH)
-	fi
+    	if ! $_ZCACHE_PAYLOAD_LOADED; then
+            _ANTIGEN_BUNDLE_RECORD=$(cat $_ZCACHE_META_PATH)
+            -zcache-enable-bundle
+    	    -intercepted-antigen-apply "$@"
+    	    -zcache-deintercept-apply
+    	    -zcache-done
+    	fi
     }
 }
 
