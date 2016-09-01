@@ -785,7 +785,7 @@ _antigen () {
   )
   [[ "$_ANTIGEN_CACHE_ENABLED" == "true" ]] && _1st_arguments+=('cache-reset:Clears bundle cache')
 
-  _1st_arguments+=('cache-reset:Clears bundle cache')
+  _1st_arguments+=('help:Show this message')
 
   __bundle() {
     _arguments \
