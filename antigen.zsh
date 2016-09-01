@@ -10,7 +10,7 @@
 local _ANTIGEN_BUNDLE_RECORD=""
 local _ANTIGEN_INSTALL_DIR="$(cd "$(dirname "$0")" && pwd)"
 local _ANTIGEN_ZCACHE_EXTENSION=false
-local _ANTIGEN_CACHE_ENABLED=${_ANTIGEN_CACHE_ENABLED:-true}
+local _ANTIGEN_CACHE_ENABLED=true
 
 # Do not load anything if anything is no available.
 if ! which git &> /dev/null; then
@@ -564,7 +564,7 @@ EOF
 }
 
 # Load zcache extension
--zcache-load-extension () {
+-antigen-load-extension () {
     if ! $_ANTIGEN_ZCACHE_EXTENSION; then
         _ANTIGEN_ZCACHE_EXTENSION=true
 
@@ -578,7 +578,7 @@ EOF
 # function, you can write `antigen-bundle` as `antigen bundle` and so on.
 antigen () {
     # Lazy load zcache extension
-    [[ "$_ANTIGEN_CACHE_ENABLED" == "true" ]] && -zcache-load-extension
+    [[ $_ANTIGEN_CACHE_ENABLED ]] && -antigen-load-extension
 
     local cmd="$1"
     if [[ -z "$cmd" ]]; then
@@ -783,7 +783,7 @@ _antigen () {
     'restore:Restore the bundles state as specified in the snapshot'
     'selfupdate:Update antigen itself'
   )
-  [[ "$_ANTIGEN_CACHE_ENABLED" == "true" ]] && _1st_arguments+=('cache-reset:Clears bundle cache')
+  [[ $_ANTIGEN_CACHE_ENABLED ]] && _1st_arguments+=('cache-reset:Clears bundle cache')
 
   _1st_arguments+=('help:Show this message')
 

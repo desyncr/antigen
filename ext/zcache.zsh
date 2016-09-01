@@ -1,21 +1,9 @@
-# Can't be changed after initialization
-local _ANTIGEN_CACHE_DIR=${_ANTIGEN_CACHE_DIR:-$_ANTIGEN_INSTALL_DIR/.cache}
-local _ANTIGEN_CACHE_MINIFY_ENABLED=${_ANTIGEN_CACHE_MINIFY_ENABLED:-true}
-local _ANTIGEN_CACHE_FIX_SCRIPT_SOURCE=${_ANTIGEN_CACHE_FIX_SCRIPT_SOURCE:-true}
-_ZCACHE_PAYLOAD_LOADED=false
+local _ZCACHE_PAYLOAD_PATH="$_ANTIGEN_INSTALL_DIR/.cache/.zcache-payload"
+local _ZCACHE_META_PATH="$_ANTIGEN_INSTALL_DIR/.cache/.zcache-meta"
+local _ZCACHE_CACHE_LOADED=false
+local -a _ZCACHE_BUNDLES
 
-# Be sure .cache directory exists
-[[ ! -e $_ANTIGEN_CACHE_DIR ]] && mkdir $_ANTIGEN_CACHE_DIR
-
-_ZCACHE_META_PATH="$_ANTIGEN_CACHE_DIR/.zcache-meta"
-_ZCACHE_PAYLOAD_PATH="$_ANTIGEN_CACHE_DIR/.zcache-payload"
-
-local _zcache_extensions_paths=""
-local _zcache_antigen_bundle_record=""
-
-# TODO Merge this code with -antigen-load function to avoid duplication
--antigen-dump-file-list () {
-
+-zcache-bundle-file-list () {
     local url="$1"
     local loc="$2"
     local make_local_clone="$3"
@@ -58,242 +46,67 @@ local _zcache_antigen_bundle_record=""
             for script ($location/*.sh(N)) { echo "$script" }
 
         fi
-
     fi
 
     echo "$location"
 }
 
-# TODO merge this code with -antigen-bundle to avoid duplication
--antigen-bundle-record () {
-    # Bundle spec arguments' default values.
-    local url="$ANTIGEN_DEFAULT_REPO_URL"
-    local loc=/
-    local branch=
-    local no_local_clone=false
-    local btype=plugin
+-zcache-generate-cache () {
+  for bundle in $_ZCACHE_BUNDLES; do
+    echo "-zcache-antigen-bundle $bundle"
+  done
 
-    # Parse the given arguments. (Will overwrite the above values).
-    eval "$(-antigen-parse-args \
-            'url?, loc? ; branch:?, no-local-clone?, btype:?' \
-            "$@")"
-
-    # Check if url is just the plugin name. Super short syntax.
-    if [[ "$url" != */* ]]; then
-        loc="plugins/$url"
-        url="$ANTIGEN_DEFAULT_REPO_URL"
-    fi
-
-    # Resolve the url.
-    url="$(-antigen-resolve-bundle-url "$url")"
-
-    # Add the branch information to the url.
-    if [[ ! -z $branch ]]; then
-        url="$url|$branch"
-    fi
-
-    # The `make_local_clone` variable better represents whether there should be
-    # a local clone made. For cloning to be avoided, firstly, the `$url` should
-    # be an absolute local path and `$branch` should be empty. In addition to
-    # these two conditions, either the `--no-local-clone` option should be
-    # given, or `$url` should not a git repo.
-    local make_local_clone=true
-    if [[ $url == /* && -z $branch &&
-            ( $no_local_clone == true || ! -d $url/.git ) ]]; then
-        make_local_clone=false
-    fi
-
-    # Add the theme extension to `loc`, if this is a theme.
-    if [[ $btype == theme && $loc != *.zsh-theme ]]; then
-        loc="$loc.zsh-theme"
-    fi
-
-    echo "$url $loc $btype $make_local_clone"
+  for bundle in $_ZCACHE_BUNDLES; do
+      -antigen-resolve-bundle-url "$bundle" |
+      eval "-zcache-bundle-file-list $bundle" | while read line; do
+        echo "> $line"
+      done
+  done
 }
 
-# Caches antigen-bundle/theme etc
--zcache-start-capture () {
-    -zcache-intercept-bundle
+-zcache-antigen-hook () {
+  if [[ "$1" == "apply" ]]; then
+    -zcache-unhook-antigen
+  fi
 
-    zcache__capture__file=$1
-    zcache__meta__file=$2
-
-    # remove prior meta file
-    [ -f "$zcache__meta__file" ] && rm -f "$zcache__meta__file"
-
-    # remove prior cache file
-    [ -f "$zcache__capture__file" ] && rm -f $zcache__capture__file
-    zcache__capture__file_created=0
-
-    # save current -antigen-load and shim in a version
-    # that logs calls to the catpure file
-    eval "function -original$(functions -- -antigen-load)"
-    -antigen-load () {
-
-        [ -z "$zcache__capture__file_created" ] && echo " # START ZCACHE GENERATED FILE" >>! $zcache__capture__file;
-        zcache__capture__file_created=true
-
-        -antigen-dump-file-list "$1" "$2" "$3" | while read line; do
-            if [[ ! $line == "" ]]; then
-                if [[ -f "$line" ]]; then
-                    echo " # SOURCE: $line" >>! $zcache__capture__file
-
-                    # Fix script sourcing if there is a reference to $0 or ${0}
-                    if $_ANTIGEN_CACHE_FIX_SCRIPT_SOURCE; then
-                        # TODO suffix __ZCACHE_FILE_PATH variable name with a PRN (from chksum?)
-                        # to avoid variable collision
-                        cat $line \
-                            | sed $'/\${0/i\\\n__ZCACHE_FILE_PATH=\''$line$'\'\n' | sed -e "s/\${0/\${__ZCACHE_FILE_PATH/" \
-                            | sed $'/\$0/i\\\n__ZCACHE_FILE_PATH=\''$line$'\'\n' | sed -e "s/\$0/\$__ZCACHE_FILE_PATH/" \
-                            >>! $zcache__capture__file
-
-                    else
-                        cat $line >>! $zcache__capture__file
-                    fi
-
-                    echo ";\n" >>! $zcache__capture__file
-
-                    -original-antigen-load "$@"
-
-                elif [[ -d "$line" ]]; then
-                    # load autocompletion
-                    fpath=($line $fpath)
-                    _zcache_extensions_paths="$line $_zcache_extensions_paths"
-                fi
-            fi
-        done
-    }
+  # $_ZCACHE_CACHE_LOADED && return
+  if [[ "$1" == "apply" ]]; then
+    -zcache-generate-cache
+  else
+    _ZCACHE_BUNDLES+=("$*")
+  fi
 }
 
-# Stops caching
--zcache-stop-capture () {
-    -zcache-deintercept-bundle
-    # unset catpure file var and restore intercepted -antigen-load
-    unset zcache__capture__file
-    eval "function $(functions -- -original-antigen-load | sed 's/-original//')"
+-zcache-unhook-antigen () {
+  eval "function $(functions -- -zcache-antigen | sed 's/-zcache-//')"
+  eval "function $(functions -- -zcache-antigen-bundles | sed 's/-zcache-//')"
+  eval "function $(functions -- -zcache-antigen-bundle | sed 's/-zcache-//')"
+  eval "function $(functions -- -zcache-antigen-apply | sed 's/-zcache-//')"
 }
 
-# Disable antigen-bundle
--zcache-disable-bundle () {
-    eval "function -original-$(functions -- antigen-bundle)"
-    antigen-bundle () {}
+-zcache-hook-antigen () {
+  # Hook into various functions
+  eval "function -zcache-$(functions -- antigen)"
+  antigen () { -zcache-antigen-hook "$@"}
+  eval "function -zcache-$(functions -- antigen-bundles)"
+  antigen-bundles () { while read line; do -zcache-antigen-hook "$line"; done}
+  eval "function -zcache-$(functions -- antigen-bundle)"
+  antigen-bundle () { -zcache-antigen-hook "$@"}
+  eval "function -zcache-$(functions -- antigen-apply)"
+  antigen-apply () { -zcache-antigen-hook "$@"}
 }
 
-# Enable antigen-bundle
--zcache-enable-bundle () {
-    eval "function $(functions -- -original-antigen-bundle | sed 's/-original-//')"
-}
-
-# Intercepts antigen-bundle in order to have a list of bundled plugins (for antigen-clean)
--zcache-intercept-bundle () {
-    eval "function -intercepted-$(functions -- antigen-bundle)"
-    _zcache_antigen_bundle_record=""
-    antigen-bundle () {
-        echo "$(-antigen-bundle-record $@)" >>! "$_ZCACHE_META_PATH"
-        _zcache_antigen_bundle_record="$_zcache_antigen_bundle_record\n$(-antigen-bundle-record $@)"
-        -intercepted-antigen-bundle "$@"
-    }
-}
-
-# De-intercepts antigen-bundle
--zcache-deintercept-bundle () {
-    eval "function $(functions -- -intercepted-antigen-bundle | sed 's/-intercepted-//')"
-}
-
-# Intercepts antigen-apply function in order to have a 'done' event
--zcache-intercept-apply () {
-    eval "function -intercepted-$(functions -- antigen-apply)"
-    antigen-apply () {
-	if ! $_ZCACHE_PAYLOAD_LOADED; then
-	    -intercepted-antigen-apply "$@"
-	    -zcache-enable-bundle
-	    -zcache-deintercept-apply
-	    -zcache-done
-	    _ANTIGEN_BUNDLE_RECORD=$(cat $_ZCACHE_META_PATH)
-	fi
-    }
-}
-
-# De-intercept antigen-apply
--zcache-deintercept-apply () {
-    eval "function $(functions -- -intercepted-antigen-apply | sed 's/-intercepted-//')"
-}
-
--zcache-intercept-update () {
-    eval "function -intercepted-$(functions -- antigen-update)"
-    antigen-update () {
-        -zcache-clear
-        -intercepted-antigen-update "$@"
-        echo 'Done.'
-        echo 'Please open a new shell to see the changes.'
-    }
-}
-
-# Loads cache if available otherwise starts to cache bundle/theme etc
 -zcache-start () {
-    -zcache-intercept-apply
-    -zcache-intercept-update
-
-    if [ -f "$_ZCACHE_PAYLOAD_PATH" ] ; then
-        source "$_ZCACHE_PAYLOAD_PATH" # cache exists, load it
-        -zcache-disable-bundle          # disable bundle so it won't load bundle twice
-        _ZCACHE_PAYLOAD_LOADED=true
-        _ANTIGEN_BUNDLE_RECORD=$(cat $_ZCACHE_META_PATH)
-    else
-        -zcache-start-capture "$_ZCACHE_PAYLOAD_PATH" "$_ZCACHE_META_PATH"
-    fi
+  -zcache-hook-antigen
+  if [ -f "$_ZCACHE_PAYLOAD_PATH" ] ; then
+    source "$_ZCACHE_PAYLOAD_PATH" # cache exists, load it
+    _ANTIGEN_BUNDLE_RECORD=$(cat $_ZCACHE_META_PATH)
+    _ZCACHE_CACHE_LOADED=true
+  fi
 }
 
-# Minifies and exports fpath to the final cache payload
--zcache-done () {
-    echo "fpath=($_zcache_extensions_paths $fpath)" >>! $_ZCACHE_PAYLOAD_PATH
-    echo "export _ANTIGEN_BUNDLE_RECORD=\"\$_ANTIGEN_BUNDLE_RECORD$_zcache_antigen_bundle_record\"" >>! $_ZCACHE_PAYLOAD_PATH
-    echo  " # END ZCACHE GENERATED FILE" >>! $_ZCACHE_PAYLOAD_PATH
-
-    if $_ANTIGEN_CACHE_MINIFY_ENABLED; then
-        sed -i'' -e '/^#.*/d' "$_ZCACHE_PAYLOAD_PATH"
-        sed -i'' -e '/^$/d' "$_ZCACHE_PAYLOAD_PATH"
-        sed -i'' -e '/./!d' "$_ZCACHE_PAYLOAD_PATH"
-
-        # Hack BSD sed
-        [ -f "$_ZCACHE_PAYLOAD_PATH-e" ] && rm "$_ZCACHE_PAYLOAD_PATH-e"
-    fi
-
-    -zcache-stop-capture
-}
-
-# Remove cache payload - efectively flushing out the cache
--zcache-clear () {
-    [ -f "$_ZCACHE_PAYLOAD_PATH" ] && rm "$_ZCACHE_PAYLOAD_PATH"
-}
-
-# Resets cache and starts capturing
--zcache-restart () {
-    -zcache-start-capture "$_ZCACHE_PAYLOAD_PATH"
-}
-
-# antigen cache-reset command
 antigen-cache-reset () {
-    -zcache-clear
-    echo
-    echo 'Done.'
-    echo 'Please open a new shell to see the changes.'
-}
-
-# antigen init /path/to/.antigenrc
-antigen-init () {
-    # Backward compatibility
-    if $_ZCACHE_PAYLOAD_LOADED; then
-        -zcache-enable-bundle
-        -zcache-deintercept-bundle
-        -zcache-deintercept-apply
-        return
-    fi
-
-    if [ -f "$_ZCACHE_PAYLOAD_PATH" ] ; then
-        _ANTIGEN_BUNDLE_RECORD=$(cat $_ZCACHE_META_PATH)
-        source "$_ZCACHE_PAYLOAD_PATH" # cache exists, load it
-    else
-        source "$@"
-    fi
+  [ -f "$_ZCACHE_META_PATH" ] && rm "$_ZCACHE_META_PATH"
+  [ -f "$_ZCACHE_PAYLOAD_PATH" ] && rm "$_ZCACHE_PAYLOAD_PATH"
+  echo 'Done. Please open a new shell to see the changes.'
 }
