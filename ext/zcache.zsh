@@ -2,37 +2,41 @@ export _ZCACHE_PAYLOAD_PATH="$_ANTIGEN_INSTALL_DIR/.cache/.zcache-payload"
 export _ZCACHE_META_PATH="$_ANTIGEN_INSTALL_DIR/.cache/.zcache-meta"
 local -a _ZCACHE_BUNDLES
 
+-zcache-process-source () {
+  cat $1 \
+    | sed $'/\${0/i\\\n__ZCACHE_FILE_PATH=\''$1$'\'\n' \
+    | sed -e "s/\${0/\${__ZCACHE_FILE_PATH/" \
+    | sed $'/\$0/i\\\n__ZCACHE_FILE_PATH=\''$1$'\'\n' \
+    | sed -e "s/\$0/\$__ZCACHE_FILE_PATH/"
+}
+
 -zcache-generate-cache () {
   for bundle in $_ZCACHE_BUNDLES; do
-    -zcache-antigen-bundle $bundle
+    -zcache-antigen-bundle "${=bundle}"
   done
 
-  local _zcache_extensions_paths=''
-  local _zcache_bundles_meta=''
+  local _zcache_extensions_paths
+  local _zcache_bundles_meta
 
   echo "#-- START ZCACHE GENERATED FILE" >>! $_ZCACHE_PAYLOAD_PATH;
+  echo "#-- GENERATED: $(date)" >>! $_ZCACHE_PAYLOAD_PATH;
   for bundle in $_ZCACHE_BUNDLES; do
-      # -antigen-load-list "$url" "$loc" "$make_local_clone"
-      eval "$(-antigen-parse-bundle ${=bundle})"
-      _zcache_bundles_meta="$url $loc $branch $make_local_clone $btype\n$_zcache_bundles_meta"
-      # url=$(-antigen-get-clone-dir "$url")
-      -antigen-load-list "$url" "$loc" "$make_local_clone" | while read line; do
-        echo "#-- SOURCE: $line" >>! $_ZCACHE_PAYLOAD_PATH
-        if [[ -f "$line" ]]; then
-            # TODO Create -zcache-per-parse-source function in order to be able to override it
-            cat $line \
-                | sed $'/\${0/i\\\n__ZCACHE_FILE_PATH=\''$line$'\'\n' \
-                | sed -e "s/\${0/\${__ZCACHE_FILE_PATH/" \
-                | sed $'/\$0/i\\\n__ZCACHE_FILE_PATH=\''$line$'\'\n' \
-                | sed -e "s/\$0/\$__ZCACHE_FILE_PATH/" \
-                >>! $_ZCACHE_PAYLOAD_PATH
-        elif [[ -d "$line" ]]; then
-            _zcache_extensions_paths="$line\n$_zcache_extensions_paths"
-        fi
-        echo ";\n" >>! $_ZCACHE_PAYLOAD_PATH
-      done
+    # -antigen-load-list "$url" "$loc" "$make_local_clone"
+    eval "$(-antigen-parse-bundle ${=bundle})"
+    _zcache_bundles_meta="$url $loc $branch $make_local_clone $btype\n$_zcache_bundles_meta"
+    # url=$(-antigen-get-clone-dir "$url")
+    -antigen-load-list "$url" "$loc" "$make_local_clone" | while read line; do
+      echo "#-- SOURCE: $line" >>! $_ZCACHE_PAYLOAD_PATH
+      if [[ -f "$line" ]]; then
+          -zcache-process-source "$line" >>! $_ZCACHE_PAYLOAD_PATH
+      elif [[ -d "$line" ]]; then
+          _zcache_extensions_paths="$line\n$_zcache_extensions_paths"
+      fi
+      echo ";#-- END SOURCE\n" >>! $_ZCACHE_PAYLOAD_PATH
+    done
   done
   echo "fpath=($_zcache_extensions_paths $fpath);" >>! $_ZCACHE_PAYLOAD_PATH
+  echo "unset __ZCACHE_FILE_PATH" >>! $_ZCACHE_PAYLOAD_PATH
   echo "export _ANTIGEN_BUNDLE_RECORD=\"${(j:\n:)_ZCACHE_BUNDLES}\"" >>! $_ZCACHE_PAYLOAD_PATH
   echo "export _ZCACHE_CACHE_LOADED=true" >>! $_ZCACHE_PAYLOAD_PATH
   echo "#-- END ZCACHE GENERATED FILE" >>! $_ZCACHE_PAYLOAD_PATH;
