@@ -22,12 +22,63 @@ fi
 typeset -a __deferred_compdefs
 compdef () { __deferred_compdefs=($__deferred_compdefs "$*") }
 
+-antigen-parse-bundle () {
+  # Bundle spec arguments' default values.
+  local url="$ANTIGEN_DEFAULT_REPO_URL"
+  local loc=/
+  local branch=
+  local no_local_clone=false
+  local btype=plugin
+
+  # Parse the given arguments. (Will overwrite the above values).
+  eval "$(-antigen-parse-args \
+          'url?, loc? ; branch:?, no-local-clone?, btype:?' \
+          "$@")"
+
+  # Check if url is just the plugin name. Super short syntax.
+  if [[ "$url" != */* ]]; then
+      loc="plugins/$url"
+      url="$ANTIGEN_DEFAULT_REPO_URL"
+  fi
+
+  # Resolve the url.
+  url="$(-antigen-resolve-bundle-url "$url")"
+
+  # Add the branch information to the url.
+  if [[ ! -z $branch ]]; then
+      url="$url|$branch"
+  fi
+
+  # The `make_local_clone` variable better represents whether there should be
+  # a local clone made. For cloning to be avoided, firstly, the `$url` should
+  # be an absolute local path and `$branch` should be empty. In addition to
+  # these two conditions, either the `--no-local-clone` option should be
+  # given, or `$url` should not a git repo.
+  local make_local_clone=true
+  if [[ $url == /* && -z $branch &&
+          ( $no_local_clone == true || ! -d $url/.git ) ]]; then
+      make_local_clone=false
+  fi
+
+  # Add the theme extension to `loc`, if this is a theme.
+  if [[ $btype == theme && $loc != *.zsh-theme ]]; then
+      loc="$loc.zsh-theme"
+  fi
+
+  # Bundle spec arguments' default values.
+  echo "local url=\""$url\""
+        local loc=\""$loc\""
+        local branch=\""$branch\""
+        local make_local_clone="$make_local_clone"
+        local btype=\""$btype\""
+        "
+}
+
 # Syntaxes
 #   antigen-bundle <url> [<loc>=/]
 # Keyword only arguments:
 #   branch - The branch of the repo to use for this bundle.
 antigen-bundle () {
-
     # Bundle spec arguments' default values.
     local url="$ANTIGEN_DEFAULT_REPO_URL"
     local loc=/
@@ -35,40 +86,7 @@ antigen-bundle () {
     local no_local_clone=false
     local btype=plugin
 
-    # Parse the given arguments. (Will overwrite the above values).
-    eval "$(-antigen-parse-args \
-            'url?, loc? ; branch:?, no-local-clone?, btype:?' \
-            "$@")"
-
-    # Check if url is just the plugin name. Super short syntax.
-    if [[ "$url" != */* ]]; then
-        loc="plugins/$url"
-        url="$ANTIGEN_DEFAULT_REPO_URL"
-    fi
-
-    # Resolve the url.
-    url="$(-antigen-resolve-bundle-url "$url")"
-
-    # Add the branch information to the url.
-    if [[ ! -z $branch ]]; then
-        url="$url|$branch"
-    fi
-
-    # The `make_local_clone` variable better represents whether there should be
-    # a local clone made. For cloning to be avoided, firstly, the `$url` should
-    # be an absolute local path and `$branch` should be empty. In addition to
-    # these two conditions, either the `--no-local-clone` option should be
-    # given, or `$url` should not a git repo.
-    local make_local_clone=true
-    if [[ $url == /* && -z $branch &&
-            ( $no_local_clone == true || ! -d $url/.git ) ]]; then
-        make_local_clone=false
-    fi
-
-    # Add the theme extension to `loc`, if this is a theme.
-    if [[ $btype == theme && $loc != *.zsh-theme ]]; then
-        loc="$loc.zsh-theme"
-    fi
+    eval "$(-antigen-parse-bundle "$@")"
 
     # Add it to the record.
     _ANTIGEN_BUNDLE_RECORD="$_ANTIGEN_BUNDLE_RECORD\n$url $loc $btype"
@@ -258,66 +276,71 @@ antigen-revert () {
 
 }
 
+-antigen-load-list () {
+  local url="$1"
+  local loc="$2"
+  local make_local_clone="$3"
+  local sources=''
+
+  # The full location where the plugin is located.
+  local location
+  if $make_local_clone; then
+      location="$(-antigen-get-clone-dir "$url")/"
+  else
+      location="$url/"
+  fi
+
+  [[ $loc != "/" ]] && location="$location$loc"
+
+  if [[ -f "$location" ]]; then
+      sources="$location"
+  else
+
+      # Source the plugin script.
+      # FIXME: I don't know. Looks very very ugly. Needs a better
+      # implementation once tests are ready.
+      local script_loc="$(ls "$location" | grep '\.plugin\.zsh$' | head -n1)"
+
+      if [[ -f $location/$script_loc ]]; then
+          # If we have a `*.plugin.zsh`, source it.
+          sources="$location/$script_loc"
+
+      elif [[ -f $location/init.zsh ]]; then
+          # Otherwise source it.
+          sources="$location/init.zsh"
+
+      elif ls "$location" | grep -l '\.zsh$' &> /dev/null; then
+          # If there is no `*.plugin.zsh` file, source *all* the `*.zsh`
+          # files.
+
+          for script ($location/*.zsh(N)) {
+            sources="$sources\n$script"
+          }
+
+      elif ls "$location" | grep -l '\.sh$' &> /dev/null; then
+          # If there are no `*.zsh` files either, we look for and source any
+          # `*.sh` files instead.
+          for script ($location/*.sh(N)) {
+            sources="$sources\n$script"
+          }
+      fi
+  fi
+
+  echo "$sources"
+}
+
 -antigen-load () {
-
-    local url="$1"
-    local loc="$2"
-    local make_local_clone="$3"
-
-    # The full location where the plugin is located.
-    local location
-    if $make_local_clone; then
-        location="$(-antigen-get-clone-dir "$url")/"
+  local src
+  for src in $(-antigen-load-list "$1" "$2" "$3"); do
+    # Add to $fpath, for completion(s), if not in there already
+    if [[ -d "$src" ]]; then
+      if (( ! ${fpath[(I)$location]} )); then
+         fpath=($location $fpath)
+      fi
     else
-        location="$url/"
+      source "$src"
     fi
-
-    [[ $loc != "/" ]] && location="$location$loc"
-
-    if [[ -f "$location" ]]; then
-        source "$location"
-
-    else
-
-        # Source the plugin script.
-        # FIXME: I don't know. Looks very very ugly. Needs a better
-        # implementation once tests are ready.
-        local script_loc="$(ls "$location" | grep '\.plugin\.zsh$' | head -n1)"
-
-        if [[ -f $location/$script_loc ]]; then
-            # If we have a `*.plugin.zsh`, source it.
-            source "$location/$script_loc"
-
-        elif [[ -f $location/init.zsh ]]; then
-            # If we have a `init.zsh`
-            if (( $+functions[pmodload] )); then
-                # If pmodload is defined pmodload the module. Remove `modules/`
-                # from loc to find module name.
-                pmodload "${loc#modules/}"
-            else
-                # Otherwise source it.
-                source "$location/init.zsh"
-            fi
-
-        elif ls "$location" | grep -l '\.zsh$' &> /dev/null; then
-            # If there is no `*.plugin.zsh` file, source *all* the `*.zsh`
-            # files.
-            for script ($location/*.zsh(N)) { source "$script" }
-
-        elif ls "$location" | grep -l '\.sh$' &> /dev/null; then
-            # If there are no `*.zsh` files either, we look for and source any
-            # `*.sh` files instead.
-            for script ($location/*.sh(N)) { source "$script" }
-
-        fi
-
-        # Add to $fpath, for completion(s), if not in there already
-        if (( ! ${fpath[(I)$location]} )); then
-            fpath=($location $fpath)
-        fi
-
-    fi
-
+  done
 }
 
 # Update (with `git pull`) antigen itself.

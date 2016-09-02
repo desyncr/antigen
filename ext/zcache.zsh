@@ -3,65 +3,32 @@ local _ZCACHE_META_PATH="$_ANTIGEN_INSTALL_DIR/.cache/.zcache-meta"
 local _ZCACHE_CACHE_LOADED=false
 local -a _ZCACHE_BUNDLES
 
--zcache-bundle-file-list () {
-    local url="$1"
-    local loc="$2"
-    local make_local_clone="$3"
-
-    # The full location where the plugin is located.
-    local location
-    if $make_local_clone; then
-        location="$(-antigen-get-clone-dir "$url")/"
-    else
-        location="$url/"
-    fi
-
-    [[ $loc != "/" ]] && location="$location$loc"
-
-    if [[ -f "$location" ]]; then
-        echo "$location"
-
-    else
-
-        # Source the plugin script.
-        # FIXME: I don't know. Looks very very ugly. Needs a better
-        # implementation once tests are ready.
-        local script_loc="$(ls "$location" | grep '\.plugin\.zsh$' | head -n1)"
-
-        if [[ -f $location/$script_loc ]]; then
-            # If we have a `*.plugin.zsh`, source it.
-            echo "$location/$script_loc"
-
-        elif [[ -f $location/init.zsh ]]; then
-            echo "$location/init.zsh"
-
-        elif ls "$location" | grep -l '\.zsh$' &> /dev/null; then
-            # If there is no `*.plugin.zsh` file, source *all* the `*.zsh`
-            # files.
-            for script ($location/*.zsh(N)) { echo "$script" }
-
-        elif ls "$location" | grep -l '\.sh$' &> /dev/null; then
-            # If there are no `*.zsh` files either, we look for and source any
-            # `*.sh` files instead.
-            for script ($location/*.sh(N)) { echo "$script" }
-
-        fi
-    fi
-
-    echo "$location"
-}
-
 -zcache-generate-cache () {
   for bundle in $_ZCACHE_BUNDLES; do
     echo "-zcache-antigen-bundle $bundle"
   done
 
+  local _zcache_extensions_paths=''
+  _ZCACHE_PAYLOAD_PATH="$_ANTIGEN_INSTALL_DIR/.cache/.zcache-payload"
+
+  echo "#-- START ZCACHE GENERATED FILE" >>! $_ZCACHE_PAYLOAD_PATH;
   for bundle in $_ZCACHE_BUNDLES; do
-      -antigen-resolve-bundle-url "$bundle" |
-      eval "-zcache-bundle-file-list $bundle" | while read line; do
-        echo "> $line"
+      # -antigen-load-list "$url" "$loc" "$make_local_clone"
+      eval "$(-antigen-parse-bundle ${=bundle})"
+      # url=$(-antigen-get-clone-dir "$url")
+      -antigen-load-list "$url" "$loc" "$make_local_clone" | while read line; do
+        echo "#-- SOURCE: $line" >>! $_ZCACHE_PAYLOAD_PATH
+        if [[ -f "$line" ]]; then
+            cat $line >>! $_ZCACHE_PAYLOAD_PATH
+        elif [[ -d "$line" ]]; then
+            _zcache_extensions_paths="$line\n$_zcache_extensions_paths"
+        fi
+        echo ";\n" >>! $_ZCACHE_PAYLOAD_PATH
       done
   done
+  echo "fpath=($_zcache_extensions_paths $fpath);" >>! $_ZCACHE_PAYLOAD_PATH
+  echo "export _ANTIGEN_BUNDLE_RECORD=\"${(j:\n:)_ZCACHE_BUNDLES}\"" >>! $_ZCACHE_PAYLOAD_PATH
+  echo "#-- END ZCACHE GENERATED FILE" >>! $_ZCACHE_PAYLOAD_PATH;
 }
 
 -zcache-antigen-hook () {
@@ -69,7 +36,11 @@ local -a _ZCACHE_BUNDLES
     -zcache-unhook-antigen
   fi
 
-  # $_ZCACHE_CACHE_LOADED && return
+  if [[ "$1" == "theme" ]]; then
+    antigen-theme "$2" "$3" "$4"
+    return
+  fi
+
   if [[ "$1" == "apply" ]]; then
     -zcache-generate-cache
   else
@@ -89,7 +60,7 @@ local -a _ZCACHE_BUNDLES
   eval "function -zcache-$(functions -- antigen)"
   antigen () { -zcache-antigen-hook "$@"}
   eval "function -zcache-$(functions -- antigen-bundles)"
-  antigen-bundles () { while read line; do -zcache-antigen-hook "$line"; done}
+  antigen-bundles () { while read line; do -zcache-antigen-hook "${=line}"; done}
   eval "function -zcache-$(functions -- antigen-bundle)"
   antigen-bundle () { -zcache-antigen-hook "$@"}
   eval "function -zcache-$(functions -- antigen-apply)"
