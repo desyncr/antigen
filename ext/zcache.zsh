@@ -40,10 +40,6 @@ local -a _ZCACHE_BUNDLES
   echo "$_zcache_bundles_meta" >>! $_ZCACHE_META_PATH
 }
 
--zcache-cache-exists () {
-  [[ -f "$_ZCACHE_PAYLOAD_PATH" ]] && return true
-}
-
 -zcache-antigen-hook () {
   if [[ "$1" == "theme" ]]; then
     antigen-theme "$2" "$3" "$4"
@@ -53,7 +49,7 @@ local -a _ZCACHE_BUNDLES
   if [[ "$1" == "apply" ]]; then
     -zcache-unhook-antigen
     ! -zcache-cache-exists && -zcache-generate-cache
-    [[ ! $_ZCACHE_CACHE_LOADED ]] && source "$_ZCACHE_PAYLOAD_PATH"
+    [[ ! $_ZCACHE_CACHE_LOADED ]] && -zcache-load-cache
   else
     _ZCACHE_BUNDLES+=("$*")
   fi
@@ -82,8 +78,27 @@ local -a _ZCACHE_BUNDLES
   -zcache-hook-antigen
 }
 
+-zcache-cache-exists () {
+  [[ -f "$_ZCACHE_PAYLOAD_PATH" ]] && return true
+}
+
+-zcache-load-cache () {
+  source "$_ZCACHE_PAYLOAD_PATH"
+  unfunction -- -zcache-generate-cache -zcache-antigen-hook -zcache-unhook-antigen \
+  -zcache-hook-antigen -zcache-start -zcache-antigen -zcache-antigen-apply \
+  -zcache-antigen-bundle -zcache-antigen-bundles
+}
+
 antigen-cache-reset () {
   [[ -f "$_ZCACHE_META_PATH" ]] && rm "$_ZCACHE_META_PATH"
   [[ -f "$_ZCACHE_PAYLOAD_PATH" ]] && rm "$_ZCACHE_PAYLOAD_PATH"
   echo 'Done. Please open a new shell to see the changes.'
+}
+
+antigen-init () {
+  if [[ -zcache-cache-exists ]]; then
+    -zcache-load-cache
+  else
+    source "$1"
+  fi
 }
