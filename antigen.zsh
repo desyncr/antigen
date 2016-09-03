@@ -9,10 +9,10 @@
 # <repo-url>, <plugin-location>, <bundle-type>, <has-local-clone>
 local _ANTIGEN_BUNDLE_RECORD=""
 local _ANTIGEN_INSTALL_DIR="$(cd "$(dirname "$0")" && pwd)"
-local _ANTIGEN_ZCACHE_EXTENSION=false
 local _ANTIGEN_CACHE_ENABLED=true
+local _ZCACHE_EXTENSION_LOADED=false
 
-# Do not load anything if anything is no available.
+# Do not load anything if git is no available.
 if ! which git &> /dev/null; then
     echo 'Antigen: Please install git to use Antigen.' >&2
     return 1
@@ -586,22 +586,21 @@ documentation, visit the project's page at 'http://antigen.sharats.me'.
 EOF
 }
 
-# Load zcache extension
+# Load zcache extension if not already loaded
 -antigen-load-extension () {
-    if ! $_ANTIGEN_ZCACHE_EXTENSION; then
-        _ANTIGEN_ZCACHE_EXTENSION=true
-
-        # Cache extension
-        source $_ANTIGEN_INSTALL_DIR/ext/zcache.zsh
-        -zcache-start
+    if ! $_ZCACHE_EXTENSION_LOADED; then
+        #_ZCACHE_EXTENSION_LOADED is set to true in zcache.zsh
+        source "$_ANTIGEN_INSTALL_DIR/ext/zcache.zsh"
+        zcache-start
     fi
 }
 
 # A syntax sugar to avoid the `-` when calling antigen commands. With this
 # function, you can write `antigen-bundle` as `antigen bundle` and so on.
 antigen () {
-    # Lazy load zcache extension
-    [[ $_ANTIGEN_CACHE_ENABLED ]] && -antigen-load-extension
+    if $_ANTIGEN_CACHE_ENABLED; then
+        -antigen-load-extension
+    fi
 
     local cmd="$1"
     if [[ -z "$cmd" ]]; then
