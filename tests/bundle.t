@@ -61,3 +61,13 @@ Load plugin multiple times, doesn't cluters _ANTIGEN_BUNDLE_RECORD
   $ antigen-bundle $PLUGIN_DIR
   $ echo $_ANTIGEN_BUNDLE_RECORD | wc -l
   3
+
+Load a binary bundle.
+
+  $ antigen-bundle $PLUGIN_DIR3 &> /dev/null
+  $ hr
+  ######
+
+  $ echo $PATH | grep test-plugin3
+  *plugin3* (glob)
+
