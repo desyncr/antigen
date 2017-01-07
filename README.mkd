@@ -1,10 +1,15 @@
-# Antigen <sup>v1</sup>
+<p align="center">
+[![Antigen](./antigen.png)](https://github.com/zsh-users/antigen)
+</p>
 
-### A plugin manager for zsh, inspired by oh-my-zsh and vundle. 
+<h1 align="center">Antigen <sup>v2</sup></h1>
+<h2 align="center">The plugin manager for zsh.</h2>
 
+<p align="center">
 [![Latest](https://img.shields.io/github/release/zsh-users/antigen.svg?label=latest)](https://github.com/zsh-users/antigen/releases/latest) [![Build Status](https://img.shields.io/travis/zsh-users/antigen/master.svg?label=stable)](http://travis-ci.org/zsh-users/antigen) [![Build Status](https://img.shields.io/travis/zsh-users/antigen/develop.svg?label=next)](http://travis-ci.org/zsh-users/antigen)
 
 [Installation](#installation) | [Configuration](#configuration) | [Documentation](https://github.com/zsh-users/antigen/wiki) | [Bug tracker](https://github.com/zsh-users/antigen/issues) | [Discussions](https://trello.com/b/P0xrGgfT/antigen) | [Chat](https://gitter.im/antigen-zsh/develop) | [License](http://mit.sharats.me/)
+</p>
 
 Antigen is a small set of functions that help you easily manage your shell (zsh)
 plugins, called bundles. The concept is pretty much the same as bundles in a
