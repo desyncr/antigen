@@ -53,13 +53,13 @@ Can create pre hook functions.
 Can create post hook functions.
 
   $ hola-pr () {
-  >   echo Olá.
+  >   echo Hey.
   > }
   $ hook hola hola-pr post
   $ hola
   Hello.
   Hola.
-  Olá.
+  Hey.
 
 Can reset all hooks functions.
 

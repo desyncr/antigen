@@ -34,3 +34,11 @@ revert-info
 
 # Config files
 .resources
+
+# Local virtualenv from installing test dependencies (`make install-deps` /
+# ci.yml). venv/pip.conf and venv/offline-wheels/ are tracked on purpose —
+# see the comment in venv/pip.conf.
+/venv/*
+!/venv/pip.conf
+!/venv/offline-wheels
+!/venv/offline-wheels/*

@@ -385,16 +385,34 @@ antigen () {
 
   local success=false
 
-  # If its a specific branch that we want, checkout that branch.
-  local branch="master" # TODO FIX THIS
+  # If its a specific branch that we want, checkout that branch. Otherwise,
+  # leave $branch empty so the remote's own default branch is used instead
+  # of assuming one.
+  local branch=""
   if [[ $url == *\|* ]]; then
     branch="$(-antigen-parse-branch ${url%|*} ${url#*|})"
   fi
 
   if [[ ! -d $clone_dir ]]; then
-    eval ${ANTIGEN_CLONE_ENV} git clone ${=ANTIGEN_CLONE_OPTS} --branch "$branch" -- "${url%|*}" "$clone_dir" &>> $ANTIGEN_LOG
+    if [[ -n $branch ]]; then
+      eval ${ANTIGEN_CLONE_ENV} git clone ${=ANTIGEN_CLONE_OPTS} --branch "$branch" -- "${url%|*}" "$clone_dir" &>> $ANTIGEN_LOG
+    else
+      # No explicit branch: let git query the remote's HEAD and check out
+      # whatever it reports as the default branch.
+      eval ${ANTIGEN_CLONE_ENV} git clone ${=ANTIGEN_CLONE_OPTS} -- "${url%|*}" "$clone_dir" &>> $ANTIGEN_LOG
+    fi
     success=$?
   elif $update; then
+    if [[ -z $branch ]]; then
+      # Reuse whatever branch this existing clone already tracks, rather
+      # than re-querying (and possibly re-pointing to) the remote's
+      # current default. Falls back to master if that can't be resolved.
+      # Called directly (not via --plugin-git) since its output needs to
+      # be captured here rather than sent to $ANTIGEN_LOG.
+      branch="$(git --git-dir="$clone_dir/.git" symbolic-ref refs/remotes/origin/HEAD 2>/dev/null)"
+      branch="${branch#refs/remotes/origin/}"
+      [[ -z $branch || $branch == "refs/remotes/origin/HEAD" ]] && branch="master"
+    fi
     # Save current revision.
     local old_rev="$(--plugin-git rev-parse HEAD)"
     # Pull changes if update requested.
@@ -1402,7 +1420,7 @@ antigen-use () {
 antigen-version () {
   local extensions
 
-  printf "Antigen %s (%s)\nRevision date: %s\n" "develop" "0554db1" "2026-07-14 16:52:45 +0100"
+  printf "Antigen %s (%s)\nRevision date: %s\n" "develop" "40ced8a" "2026-07-14 18:38:12 +0000"
 
   # Show extension information if any is available
   if (( $+functions[antigen-ext] )); then
